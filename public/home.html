@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arch Diagram</title>
+<style>
+  :root { --bg: #f3f4f6; --card: #fff; --border: #e2e5ea; --text: #1f2937; --muted: #6b7280; --accent: #2563eb; --danger: #dc2626; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--text); background: var(--bg); }
+  main { max-width: 760px; margin: 0 auto; padding: 48px 16px; }
+  h1 { font-size: 28px; margin: 0 0 4px; }
+  .lead { color: var(--muted); margin: 0 0 28px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 18px; }
+  .card h2 { font-size: 15px; margin: 0 0 12px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .btn { border: 1px solid var(--border); background: #fff; border-radius: 8px; padding: 8px 14px; cursor: pointer; font: inherit; color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+  .btn:hover { background: var(--bg); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn:disabled { opacity: .5; cursor: default; }
+  form.join { display: flex; gap: 8px; }
+  form.join input { flex: 1; min-width: 0; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font: inherit; }
+  ul.recent { list-style: none; margin: 0; padding: 0; }
+  ul.recent li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); }
+  ul.recent li:first-child { border-top: 0; }
+  ul.recent a { color: var(--accent); text-decoration: none; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  ul.recent small { color: var(--muted); white-space: nowrap; }
+  ul.recent button { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 16px; }
+  ul.recent button:hover { color: var(--danger); }
+  .muted { color: var(--muted); }
+  .err { color: var(--danger); margin-top: 10px; }
+  footer { color: var(--muted); font-size: 12px; text-align: center; }
+  footer a { color: inherit; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Arch Diagram</h1>
+  <p class="lead">Architecture diagrams you can share with a link and edit together in real time.</p>
+
+  <section class="card">
+    <h2>New diagram</h2>
+    <div class="actions">
+      <button class="btn primary" data-new="blank">+ Blank diagram</button>
+      <button class="btn" data-new="demo">Start from the example</button>
+      <button class="btn" data-new="import">Import a JSON file…</button>
+    </div>
+    <p class="muted" style="margin:12px 0 0">Every diagram gets its own private link. Anyone you send the link to can view and edit it.</p>
+    <div class="err" id="err" hidden></div>
+    <input type="file" id="fileInput" accept=".json,application/json" hidden>
+  </section>
+
+  <section class="card">
+    <h2>Open a shared diagram</h2>
+    <form class="join" id="joinForm">
+      <input id="joinInput" placeholder="Paste a link or a diagram id" autocomplete="off" spellcheck="false">
+      <button class="btn" type="submit">Open</button>
+    </form>
+  </section>
+
+  <section class="card" id="recentCard" hidden>
+    <h2>Recent on this device</h2>
+    <ul class="recent" id="recent"></ul>
+  </section>
+
+  <footer>Based on <a href="https://github.com/avchaykin/arch-diagram" target="_blank" rel="noopener">arch-diagram</a></footer>
+</main>
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const RECENT_KEY = 'archdiagram.recent';
+function getRecent() { try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]').filter(r => r && r.id); } catch (e) { return []; } }
+function setRecent(list) { try { localStorage.setItem(RECENT_KEY, JSON.stringify(list)); } catch (e) { /* ignore */ } }
+
+function showError(msg) { const e = $('#err'); e.textContent = msg; e.hidden = !msg; }
+
+async function create(body, hash = '') {
+  showError('');
+  for (const b of document.querySelectorAll('[data-new]')) b.disabled = true;
+  try {
+    const res = await fetch('/api/diagrams', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
+    const { url } = await res.json();
+    location.href = url + hash;
+  } catch (err) {
+    showError('Could not create the diagram: ' + err.message);
+    for (const b of document.querySelectorAll('[data-new]')) b.disabled = false;
+  }
+}
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-new]');
+  if (b) {
+    if (b.dataset.new === 'blank') create({});
+    if (b.dataset.new === 'demo') create({ name: 'Example diagram' }, '#demo');
+    if (b.dataset.new === 'import') { $('#fileInput').value = ''; $('#fileInput').click(); }
+  }
+  const rm = e.target.closest('[data-forget]');
+  if (rm) { setRecent(getRecent().filter(r => r.id !== rm.dataset.forget)); renderRecent(); }
+});
+$('#fileInput').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  let data;
+  try { data = JSON.parse(await file.text()); } catch (err) { showError('Not a valid JSON file'); return; }
+  if (!data || (!Array.isArray(data.blocks) && !Array.isArray(data.links))) { showError('Not an arch-diagram JSON file'); return; }
+  create({ name: data.name || file.name.replace(/\.json$/i, ''), data });
+});
+$('#joinForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const v = $('#joinInput').value.trim();
+  const m = v.match(/\/d\/([A-Za-z0-9_-]+)/) || v.match(/^([A-Za-z0-9_-]{8,64})$/);
+  if (m) location.href = '/d/' + m[1];
+  else showError('That does not look like a diagram link');
+});
+
+function ago(t) {
+  const s = (Date.now() - t) / 1000;
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.round(s / 60) + ' min ago';
+  if (s < 86400) return Math.round(s / 3600) + ' h ago';
+  return new Date(t).toLocaleDateString();
+}
+function renderRecent() {
+  const list = getRecent().sort((a, b) => b.at - a.at);
+  $('#recentCard').hidden = !list.length;
+  $('#recent').innerHTML = list.map(r => `<li><a href="/d/${esc(r.id)}">${esc(r.name || 'Untitled diagram')}</a><small>${esc(ago(r.at))}</small>
+    <button data-forget="${esc(r.id)}" title="Remove from this list (the diagram itself is kept)">×</button></li>`).join('');
+}
+renderRecent();
+</script>
+</body>
+</html>

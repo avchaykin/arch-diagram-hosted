@@ -1,9 +1,62 @@
-# Arch Diagram
+# Arch Diagram (hosted)
 
-A single-file, serverless web app for drawing architecture diagrams.
-Open `index.html` in Google Chrome (or Edge). Nothing to install, no build step and no server.
+The hosted, multi-user version of [arch-diagram](https://github.com/avchaykin/arch-diagram), a web app for drawing architecture diagrams.
+Create a diagram, share its link, and edit it together in real time.
 
-## Features
+## Sharing and co-editing
+
+- **Create**: the start page creates a blank diagram, one from the example, or one imported from a `.json` file. Each diagram gets an unguessable id and its own link, `/d/<id>`.
+- **Share**: the **Share** button copies the link. Anyone who opens it can view and edit the diagram. There are no accounts: the link is the key, so share it only with people who should have access.
+- **Live editing**: changes appear for everyone as they are made, even during a drag. Two people can work on different elements at the same time. If they change the same property of the same element, the last change to reach the server wins, and all clients converge to it.
+- **Presence**: you see the other people's avatars, pointers and selections in their color. Click your avatar to set your name and color. Click someone else's avatar to jump to their pointer.
+- **Undo** reverts only your own changes and leaves the others' edits alone.
+- **Saving** is automatic, on the server. The dot next to the name is green while connected. If the connection drops, you can keep working. Your changes are sent once it is back.
+- **Files**: **Download** saves a JSON copy in the format of the stand-alone app. **Import**, or dropping a `.json` file on the window, replaces the content of the current diagram, and Undo brings it back.
+- **Recent**: the start page lists the diagrams opened on this device.
+
+## Running
+
+Requires Node.js 18 or newer.
+
+```sh
+npm install
+npm start                # http://localhost:3000
+npm test                 # end-to-end check of the sync server
+```
+
+Environment variables:
+
+| Variable   | Default   | Meaning                                  |
+|------------|-----------|------------------------------------------|
+| `PORT`     | `3000`    | HTTP port                                |
+| `HOST`     | `0.0.0.0` | Interface to listen on                   |
+| `DATA_DIR` | `./data`  | Where diagrams are stored, one JSON file per diagram |
+
+With Docker:
+
+```sh
+docker build -t arch-diagram-hosted .
+docker run -p 3000:3000 -v arch-data:/data arch-diagram-hosted
+```
+
+Any host that runs a Node process with WebSockets and a persistent disk works, for example Fly.io, Render, Railway or a VPS. Put it behind HTTPS: the client then uses `wss://` on its own.
+
+## How it works
+
+- `server.js`: a single Node process with plain `http` plus [`ws`](https://github.com/websockets/ws). It serves the pages, provides the REST API and runs one WebSocket "room" per diagram. While a diagram is open it is held in memory. It is written to `DATA_DIR/<id>.json` shortly after each change, and unloaded a minute after the last person leaves.
+- `public/index.html`: the editor, which is the original single-file app with a sync layer added. After each change, the client compares the diagram with the last state it shared and sends only the differences as element-level operations: `add`, `set` (changed fields only), `del`, `order`, `settings` and `name`. The server applies them in arrival order, acks the sender and relays them to the others. If a remote change touches something this client has sent but has not had acknowledged yet, the client skips it. Its own change reaches the server later and wins there too, so everyone ends with the same diagram.
+- `public/home.html`: the start page.
+
+API:
+
+| Method | Path | |
+|---|---|---|
+| `POST` | `/api/diagrams` | Create a diagram. Optional body: `{ "name": "…", "data": <arch-diagram JSON> }`. Returns `{ id, url }` |
+| `GET`  | `/api/diagrams/:id` | The diagram as arch-diagram JSON (`?download` to get it as a file) |
+| `WS`   | `/ws/:id` | Live session |
+| `GET`  | `/healthz` | Health check |
+
+## Editor features
 
 - **Blocks**: size, fill, border style/color/width, corner radius, a rich-text title (bold, italic, colors, sizes, line breaks), an icon (built-in set or any emoji/text), and a badge plus an optional highlight ring.
 - **Links**: **Shift + drag** from a block to another block, or onto empty canvas to leave a free end.
@@ -26,7 +79,6 @@ Open `index.html` in Google Chrome (or Edge). Nothing to install, no build step 
   - A flow has a name, a description and a color, and each step has its own description.
   - Hovering a flow in the list previews its step numbers on the canvas. When a flow is open, its numbers stay visible. Click a number to jump to that step.
 - **Settings**: canvas, grid and snap, routing parameters, and default styles for new blocks and links. You can save them as your personal defaults.
-- **Files**: the diagram is stored as JSON. In Chrome the File System Access API reads and writes the local file in place; other browsers fall back to upload/download. Work is also auto-saved in browser storage, and you can drop a `.json` file onto the window to open it.
 - **Export**: the Export menu saves the diagram as PNG or PDF in high resolution (3× by default, adjustable in Settings), or as a vector SVG. The PDF page matches the diagram's size and holds a lossless image. Selection and grid are left out; the open flow's step numbers are included.
 - **Other**: undo/redo, copy/paste/duplicate, box selection, zoom/pan.
 
@@ -63,7 +115,7 @@ A manually shaped polyline stores its bend points as `"waypoints": [ { "x", "y" 
 | Stop recording flow steps | Enter / Esc |
 | Undo / redo | Ctrl/⌘+Z, Ctrl/⌘+Shift+Z |
 | Copy / paste / duplicate | Ctrl/⌘+C / V / D |
-| Save / save as / open | Ctrl/⌘+S, Ctrl/⌘+Shift+S, Ctrl/⌘+O |
+| Download JSON / import JSON | Ctrl/⌘+Shift+S, Ctrl/⌘+O |
 | Zoom | mouse wheel |
 | Pan | drag empty canvas (or Space + drag) |
 | Box select | Shift or Ctrl/⌘ + drag on empty canvas |

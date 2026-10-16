@@ -1,0 +1,15 @@
+{
+  "name": "arch-diagram-hosted",
+  "version": "1.0.0",
+  "description": "Hosted Arch Diagram: shareable architecture diagrams with real-time co-editing",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/sync.test.js"
+  },
+  "engines": { "node": ">=18" },
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

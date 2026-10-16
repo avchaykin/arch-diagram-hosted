@@ -48,7 +48,30 @@
   .tbtn svg { width: 16px; height: 16px; }
   .tbtn:disabled { opacity: .4; cursor: default; }
   #zoomLabel { min-width: 46px; text-align: center; color: var(--ui-muted); cursor: pointer; }
-  #fileName { margin-left: auto; color: var(--ui-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 30vw; }
+  #collab { margin-left: auto; display: flex; align-items: center; gap: 8px; min-width: 0; }
+  #docName {
+    border: 1px solid transparent; background: transparent; border-radius: 6px; padding: 4px 6px; font-weight: 600;
+    width: 220px; max-width: 24vw; min-width: 60px; text-overflow: ellipsis;
+  }
+  #docName:hover { border-color: var(--ui-border); }
+  #docName:focus { border-color: var(--accent); outline: none; background: var(--ui-bg); }
+  #connState { width: 8px; height: 8px; border-radius: 50%; background: #9ca3af; flex: none; }
+  #connState.on { background: #16a34a; }
+  #connState.off { background: var(--danger); }
+  #peers { display: flex; align-items: center; }
+  .peer {
+    width: 26px; height: 26px; border-radius: 50%; color: #fff; font-size: 10px; font-weight: 700; flex: none; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; border: 2px solid var(--ui-bg); margin-left: -6px; user-select: none;
+  }
+  .peer:first-child { margin-left: 0; }
+  .peer.me { box-shadow: 0 0 0 2px var(--accent-soft); }
+  .peer.more { background: var(--ui-bg2); color: var(--ui-muted); cursor: default; }
+  .tbtn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .tbtn.primary:hover { background: var(--accent); border-color: var(--accent); filter: brightness(1.08); }
+  #meMenu { left: auto; right: 0; padding: 10px; gap: 8px; min-width: 240px; }
+  #meMenu label { display: flex; align-items: center; gap: 8px; }
+  #meMenu label span { width: 44px; color: var(--ui-muted); }
+  #meMenu input[type=text] { flex: 1; min-width: 0; border: 1px solid var(--ui-border); border-radius: 6px; padding: 4px 6px; }
   #toolbar a.tbtn { color: inherit; text-decoration: none; }
 
   /* ---------- main ---------- */
@@ -107,6 +130,18 @@
     border-radius: 8px; font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 10;
   }
   #toast.show { opacity: .92; }
+
+  /* ---------- collaboration ---------- */
+  #cursors { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 4; }
+  .rcursor { position: absolute; left: 0; top: 0; }
+  .rcursor svg { display: block; filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
+  .rcursor span { position: absolute; left: 12px; top: 16px; color: #fff; font-size: 11px; padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+  #loading {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px;
+    background: rgba(255,255,255,.85); color: var(--ui-muted); font-size: 14px; z-index: 8; text-align: center; padding: 16px;
+  }
+  #loading b { color: var(--ui-text); font-size: 16px; }
+  #loading a { color: var(--accent); }
 
   /* ---------- inspector ---------- */
   #side { width: 290px; flex: none; border-left: 1px solid var(--ui-border); background: var(--ui-bg); display: flex; flex-direction: column; min-height: 0; }
@@ -232,10 +267,9 @@
 <header id="toolbar">
   <div class="brand">Arch Diagram<small id="verLabel"></small></div>
   <div class="tgroup">
-    <button class="tbtn" data-cmd="new" title="New diagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 12v6M9 15h6"/></svg><span class="lbl">New</span></button>
-    <button class="tbtn" data-cmd="open" title="Open JSON file (Ctrl/Cmd+O)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="lbl">Open</span></button>
-    <button class="tbtn" data-cmd="save" title="Save (Ctrl/Cmd+S)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg><span class="lbl">Save</span></button>
-    <button class="tbtn" data-cmd="saveAs" title="Save as… (Ctrl/Cmd+Shift+S)"><span class="lbl">Save as…</span></button>
+    <button class="tbtn" data-cmd="new" title="Create a new shared diagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 12v6M9 15h6"/></svg><span class="lbl">New</span></button>
+    <button class="tbtn" data-cmd="open" title="Import a JSON file into this diagram (Ctrl/Cmd+O)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="lbl">Import</span></button>
+    <button class="tbtn" data-cmd="save" title="Download as a JSON file (Ctrl/Cmd+Shift+S)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg><span class="lbl">Download</span></button>
     <div class="menu-wrap">
       <button class="tbtn" data-cmd="exportMenu" title="Export the diagram as an image or PDF"><span class="lbl">Export</span> ▾</button>
       <div class="menu" id="exportMenu" hidden>
@@ -263,7 +297,18 @@
     <button class="tbtn" data-cmd="help" title="Help &amp; shortcuts"><span class="lbl">Help</span></button>
     <a class="tbtn" id="ghLink" target="_blank" rel="noopener" title="Source on GitHub"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5a11.5 11.5 0 0 0-3.6 22.4c.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 0 1 5.8 0c2.2-1.5 3.2-1.2 3.2-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.9 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A11.5 11.5 0 0 0 12 .5z"/></svg></a>
   </div>
-  <span id="fileName"></span>
+  <div id="collab">
+    <input id="docName" spellcheck="false" autocomplete="off" title="Diagram name (click to rename)">
+    <span id="connState" title="Connecting…"></span>
+    <div class="menu-wrap">
+      <div id="peers"></div>
+      <div class="menu" id="meMenu" hidden>
+        <label><span>Name</span><input type="text" id="meName" maxlength="40"></label>
+        <label><span>Color</span><input type="color" id="meColor"></label>
+      </div>
+    </div>
+    <button class="tbtn primary" data-cmd="share" title="Copy the link to this diagram. Anyone with the link can edit it."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>Share</button>
+  </div>
 </header>
 
 <main>
@@ -278,6 +323,7 @@
         <g id="connLayer"></g>
         <g id="flowLayer"></g>
         <g id="overlayLayer"></g>
+        <g id="peerLayer"></g>
       </g>
     </svg>
     <div id="edWrap" hidden><div id="edInner" contenteditable="true" spellcheck="false"></div></div>
@@ -300,8 +346,10 @@
       <button data-ed="removeFormat" title="Clear formatting">⌫</button>
       <button data-ed="done" title="Done (Esc / Ctrl+Enter)">✓</button>
     </div>
-    <div id="hint">Double-click canvas: new block · Shift+drag from a block: new link · Double-click block: edit title</div>
+    <div id="hint">Double-click canvas: new block · Shift+drag from a block: new link · Double-click block: edit title · Share the link to edit together</div>
     <div id="toast"></div>
+    <div id="cursors"></div>
+    <div id="loading">Connecting…</div>
     <div id="recBar" hidden><span class="dot"></span><span id="recText"></span><button data-fact="stop">Done</button></div>
   </div>
   <aside id="side">
@@ -337,7 +385,7 @@
 const APP_INFO = {
   name: 'arch-diagram',
   version: '1.0.0',
-  github: 'https://github.com/avchaykin/arch-diagram'
+  github: 'https://github.com/avchaykin/arch-diagram-hosted'
 };
 const FORMAT_VERSION = 1;
 
@@ -531,7 +579,7 @@ let doc = { blocks: [], links: [], flows: [], frames: [] };
 let view = { x: 0, y: 0, k: 1 };
 let sel = new Set();
 let undoStack = [], redoStack = [];
-let fileHandle = null, fileName = 'untitled.json', dirty = false;
+let docName = 'Untitled diagram';
 let drag = null, editingId = null, spaceDown = false;
 let bmap = new Map();
 let lastGeo = new Map();
@@ -545,7 +593,7 @@ const svg = $('#svg'), stage = $('#stage'), viewport = $('#viewport');
 const frameLayer = $('#frameLayer');
 const gridLayer = $('#gridLayer'), linkLayer = $('#linkLayer'), blockLayer = $('#blockLayer');
 const flowLayer = $('#flowLayer'), flowsPanel = $('#flowsPanel');
-const connLayer = $('#connLayer'), overlayLayer = $('#overlayLayer'), defs = $('#defs');
+const connLayer = $('#connLayer'), overlayLayer = $('#overlayLayer'), peerLayer = $('#peerLayer'), defs = $('#defs');
 const inspector = $('#inspector');
 const edWrap = $('#edWrap'), edInner = $('#edInner'), edBar = $('#edBar');
 
@@ -700,34 +748,65 @@ const frameById = id => doc.frames.find(f => f.id === id);
 /* =====================================================================
    Undo / redo / dirty
    ===================================================================== */
+const COLLS = ['blocks', 'links', 'flows', 'frames'];
 const snapshot = () => JSON.stringify({ blocks: doc.blocks, links: doc.links, flows: doc.flows, frames: doc.frames });
+/* Several people edit the same diagram, so undo only reverts this user's own
+   changes: an entry keeps the state before and after a local change, and
+   undoing puts back just the elements that differ between the two. Edits made
+   meanwhile by others to other elements are left alone. */
 function pushUndo(snap) {
-  if (snap === snapshot()) return;
-  undoStack.push(snap);
+  const after = snapshot();
+  if (snap === after) return;
+  undoStack.push({ b: snap, a: after });
   if (undoStack.length > 300) undoStack.shift();
   redoStack = [];
   markDirty();
 }
-function restore(snap) {
-  doc = JSON.parse(snap);
-  doc.flows = doc.flows || [];
-  doc.frames = doc.frames || [];
+function reorderList(list, ids) {
+  const byId = new Map(list.map(o => [o.id, o]));
+  const out = [];
+  for (const id of ids) { const o = byId.get(id); if (o) { out.push(o); byId.delete(id); } }
+  for (const o of list) if (byId.has(o.id)) out.push(o);
+  return out;
+}
+function restore(from, to) {
+  const F = JSON.parse(from), T = JSON.parse(to);
+  for (const c of COLLS) {
+    const fm = new Map((F[c] || []).map(o => [o.id, o])), tm = new Map((T[c] || []).map(o => [o.id, o]));
+    const list = doc[c];
+    for (const id of new Set([...fm.keys(), ...tm.keys()])) {
+      const a = fm.get(id), b = tm.get(id);
+      if (JSON.stringify(a) === JSON.stringify(b)) continue;
+      const i = list.findIndex(o => o.id === id);
+      if (!b) { if (i >= 0) list.splice(i, 1); }
+      else if (i >= 0) list[i] = clone(b);
+      else list.push(clone(b));
+    }
+    const order = (T[c] || []).map(o => o.id);
+    if ((F[c] || []).map(o => o.id).join('\n') !== order.join('\n')) doc[c] = reorderList(list, order);
+  }
+  dropDangling();
   bmap = new Map(doc.blocks.map(b => [b.id, b]));
   for (const id of [...sel]) if (!bmap.has(id) && !linkById(id) && !frameById(id)) sel.delete(id);
   markDirty(); render(); refreshInspector();
 }
-function undo() { if (!undoStack.length) return; redoStack.push(snapshot()); restore(undoStack.pop()); }
-function redo() { if (!redoStack.length) return; undoStack.push(snapshot()); restore(redoStack.pop()); }
-
-let autosaveTimer = null;
-function markDirty() {
-  dirty = true; updateTitle();
-  clearTimeout(autosaveTimer);
-  autosaveTimer = setTimeout(() => storageSet('archdiagram.autosave', JSON.stringify({ fileName, data: buildFileObject() })), 400);
+function undo() { if (!undoStack.length) return; const e = undoStack.pop(); redoStack.push(e); restore(e.a, e.b); }
+function redo() { if (!redoStack.length) return; const e = redoStack.pop(); undoStack.push(e); restore(e.b, e.a); }
+/* links attached to a block that no longer exists (removed by someone else) go too */
+function dropDangling() {
+  const ids = new Set(doc.blocks.map(b => b.id));
+  const ok = e => !e.block || ids.has(e.block);
+  if (doc.links.every(l => ok(l.from) && ok(l.to))) return;
+  doc.links = doc.links.filter(l => ok(l.from) && ok(l.to));
+  pruneFlows();
 }
+
+/* the diagram lives on the server: a change only needs to be sent */
+function markDirty() { scheduleSync(); }
 function updateTitle() {
-  document.title = `${dirty ? '• ' : ''}${fileName} — Arch Diagram`;
-  $('#fileName').textContent = (dirty ? '● ' : '') + fileName + (fileHandle ? '' : (window.showSaveFilePicker ? '' : ' (download mode)'));
+  document.title = `${docName} — Arch Diagram`;
+  const inp = $('#docName');
+  if (document.activeElement !== inp) inp.value = docName;
 }
 
 /* =====================================================================
@@ -1785,7 +1864,11 @@ function doRender() {
   connLayer.innerHTML = cs;
   flowLayer.innerHTML = flowSvg();
   overlayLayer.innerHTML = overlaySvg(ends);
+  peerLayer.innerHTML = peersSvg();
+  renderCursors();
   positionEditor();
+  scheduleSync();
+  sendPresence();
   $('[data-cmd=undo]').disabled = !undoStack.length;
   $('[data-cmd=redo]').disabled = !redoStack.length;
 }
@@ -2950,13 +3033,17 @@ function openHelp() {
       <tr><td>${k('Ctrl/⌘+A')}</td><td>Select all</td></tr>
       <tr><td>${k('Del')} / ${k('Backspace')}</td><td>Delete selection</td></tr>
       <tr><td>Arrows (${k('Shift')} = grid step)</td><td>Nudge selected blocks</td></tr>
-      <tr><td>${k('Ctrl/⌘+S')} / ${k('Ctrl/⌘+Shift+S')} / ${k('Ctrl/⌘+O')}</td><td>Save / save as / open</td></tr>
+      <tr><td>${k('Ctrl/⌘+Shift+S')} / ${k('Ctrl/⌘+O')}</td><td>Download JSON / import JSON</td></tr>
       <tr><td>${k('+')} ${k('-')} ${k('F')} ${k('Ctrl/⌘+0')}</td><td>Zoom in, out, fit, 100%</td></tr>
       <tr><td>Wheel</td><td>Zoom around the pointer</td></tr>
       <tr><td>Drag empty canvas (or ${k('Space')} + drag)</td><td>Pan</td></tr></table>
+    <h4>Sharing</h4>
+    <p class="muted">Every diagram has its own link. <b>Share</b> copies it; anyone who opens the link can view and edit the diagram together with you,
+    and sees the others' pointers and selections. Changes are saved on the server as you go. Undo only reverts your own changes.
+    Click your avatar to change the name and color the others see.</p>
     <h4>Files</h4>
-    <p class="muted">Diagrams are stored as JSON. In Google Chrome / Edge the file is read and written in place (File System Access API);
-    other browsers fall back to upload/download. Work is also auto-saved in this browser. You can drop a .json file onto the window to open it.</p>
+    <p class="muted">Diagrams use the same JSON format as the stand-alone app. <b>Download</b> saves a copy; <b>Import</b>, or dropping a .json file
+    onto the window, replaces the content of this diagram (Undo brings it back).</p>
     <p class="muted">${esc(APP_INFO.name)} v${esc(APP_INFO.version)} — <a href="${esc(APP_INFO.github)}" target="_blank" rel="noopener">${esc(APP_INFO.github)}</a></p>`;
   $('#helpDlg').showModal();
 }
@@ -2970,6 +3057,7 @@ function buildFileObject() {
     app: { name: APP_INFO.name, version: APP_INFO.version, github: APP_INFO.github },
     format: FORMAT_VERSION,
     savedAt: new Date().toISOString(),
+    name: docName,
     settings,
     view: { x: r2(view.x), y: r2(view.y), k: r2(view.k * 1000) / 1000 },
     blocks: doc.blocks,
@@ -2978,62 +3066,35 @@ function buildFileObject() {
     frames: doc.frames
   };
 }
-function loadFileObject(obj, name, handle) {
+/* Importing a file replaces the content of the shared diagram (Undo brings it back) */
+function loadFileObject(obj, name) {
   if (!obj || typeof obj !== 'object' || (!Array.isArray(obj.blocks) && !Array.isArray(obj.links))) throw new Error('Not an arch-diagram JSON file');
   const snap = snapshot();
   if (editingId) cancelEdit();
   settings = deepMerge(DEFAULT_SETTINGS, obj.settings);
   doc = normalizeDoc(obj);
   bmap = new Map(doc.blocks.map(b => [b.id, b]));
-  if (snap !== snapshot()) { undoStack.push(snap); redoStack = []; }
   sel.clear(); activeFlow = null; recording = false;
-  fileName = name || 'untitled.json';
-  fileHandle = handle || null;
+  const n = String(obj.name || String(name || '').replace(/\.json$/i, '')).trim().slice(0, 200);
+  if (n) docName = n;
+  pushUndo(snap);
   if (obj.view && isFinite(obj.view.k)) view = { x: num(obj.view.x, 0), y: num(obj.view.y, 0), k: clamp(num(obj.view.k, 1), 0.1, 5) };
   else requestAnimationFrame(fitView);
-  dirty = false; updateTitle();
+  markDirty(); updateTitle();
   refreshInspector(); render();
 }
-async function openFile() {
-  if (window.showOpenFilePicker) {
-    try {
-      const [h] = await window.showOpenFilePicker({ types: FILE_TYPES, multiple: false });
-      const file = await h.getFile();
-      loadFileObject(JSON.parse(await file.text()), file.name, h);
-      toast('Opened ' + file.name);
-    } catch (err) { if (err.name !== 'AbortError') toast('Could not open: ' + err.message, true); }
-  } else {
-    $('#fileInput').value = '';
-    $('#fileInput').click();
-  }
+function openFile() {
+  $('#fileInput').value = '';
+  $('#fileInput').click();
 }
 $('#fileInput').addEventListener('change', async e => {
   const file = e.target.files[0];
   if (!file) return;
-  try { loadFileObject(JSON.parse(await file.text()), file.name, null); toast('Opened ' + file.name); }
-  catch (err) { toast('Could not open: ' + err.message, true); }
+  try { loadFileObject(JSON.parse(await file.text()), file.name); toast('Imported ' + file.name); }
+  catch (err) { toast('Could not import: ' + err.message, true); }
 });
-async function saveFile(saveAs = false) {
-  const json = JSON.stringify(buildFileObject(), null, 2);
-  if (window.showSaveFilePicker) {
-    try {
-      if (!fileHandle || saveAs) {
-        fileHandle = await window.showSaveFilePicker({ suggestedName: fileName, types: FILE_TYPES });
-        fileName = fileHandle.name;
-      }
-      if (fileHandle.requestPermission && (await fileHandle.queryPermission({ mode: 'readwrite' })) !== 'granted') {
-        if ((await fileHandle.requestPermission({ mode: 'readwrite' })) !== 'granted') throw new Error('Permission denied');
-      }
-      const w = await fileHandle.createWritable();
-      await w.write(json); await w.close();
-      dirty = false; updateTitle();
-      storageSet('archdiagram.autosave', JSON.stringify({ fileName, data: buildFileObject() }));
-      toast('Saved ' + fileName);
-    } catch (err) { if (err.name !== 'AbortError') toast('Could not save: ' + err.message, true); }
-  } else {
-    download(fileName, json, 'application/json');
-    dirty = false; updateTitle();
-  }
+function saveFile() {
+  download(exportName('json'), JSON.stringify(buildFileObject(), null, 2), 'application/json');
 }
 function download(name, text, type) {
   const a = document.createElement('a');
@@ -3042,19 +3103,13 @@ function download(name, text, type) {
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
-function newDiagram() {
-  const snap = snapshot();
-  if (editingId) cancelEdit();
-  doc = { blocks: [], links: [], flows: [], frames: [] };
-  activeFlow = null; recording = false;
-  settings = loadUserDefaults();
-  if (snap !== snapshot()) { undoStack.push(snap); redoStack = []; }
-  sel.clear(); fileHandle = null; fileName = 'untitled.json';
-  const r = svg.getBoundingClientRect();
-  view = { x: r.width / 2, y: r.height / 2, k: 1 };
-  markDirty(); dirty = false; updateTitle();
-  refreshInspector(); render();
-  toast('New diagram (Undo restores the previous one)');
+/* a new diagram is a new shared document with its own link */
+async function newDiagram() {
+  try {
+    const res = await fetch('/api/diagrams', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    if (!res.ok) throw new Error(res.statusText);
+    location.href = (await res.json()).url;
+  } catch (err) { toast('Could not create a diagram: ' + err.message, true); }
 }
 /* The diagram as a standalone SVG document (no selection, no grid) */
 function buildExportSvg() {
@@ -3073,7 +3128,7 @@ function buildExportSvg() {
   render();
   return { svg: out, w: Math.ceil(w), h: Math.ceil(h) };
 }
-const exportName = ext => fileName.replace(/\.json$/i, '') + '.' + ext;
+const exportName = ext => (docName.replace(/[\\/:*?"<>|]+/g, '_').trim() || 'diagram') + '.' + ext;
 function exportSvg() {
   const r = buildExportSvg();
   if (!r) { toast('Nothing to export'); return; }
@@ -3158,12 +3213,10 @@ window.addEventListener('drop', async e => {
   e.preventDefault();
   const item = [...(e.dataTransfer.items || [])].find(i => i.kind === 'file');
   if (!item) return;
-  let handle = null;
-  try { if (item.getAsFileSystemHandle) handle = await item.getAsFileSystemHandle(); } catch (err) { handle = null; }
-  const file = handle && handle.getFile ? await handle.getFile() : item.getAsFile();
+  const file = item.getAsFile();
   if (!file) return;
-  try { loadFileObject(JSON.parse(await file.text()), file.name, handle && handle.kind === 'file' ? handle : null); toast('Opened ' + file.name); }
-  catch (err) { toast('Could not open: ' + err.message, true); }
+  try { loadFileObject(JSON.parse(await file.text()), file.name); toast('Imported ' + file.name); }
+  catch (err) { toast('Could not import: ' + err.message, true); }
 });
 
 let toastTimer = null;
@@ -3179,7 +3232,7 @@ function toast(msg, isErr) {
    Toolbar & keyboard
    ===================================================================== */
 const COMMANDS = {
-  new: newDiagram, open: openFile, save: () => saveFile(false), saveAs: () => saveFile(true), exportSvg, exportPng, exportPdf,
+  new: newDiagram, open: openFile, save: saveFile, share: shareLink, exportSvg, exportPng, exportPdf,
   exportMenu: () => { $('#exportMenu').hidden = !$('#exportMenu').hidden; },
   addBlock: addBlockCenter, addFrame, undo, redo, delete: deleteSelection,
   zoomIn: () => zoomCenter(1.2), zoomOut: () => zoomCenter(1 / 1.2), fit: fitView,
@@ -3201,7 +3254,11 @@ window.addEventListener('keydown', e => {
   if (e.key === 'Shift') svg.classList.add('shift');
   const mod = e.ctrlKey || e.metaKey;
   const key = e.key.toLowerCase();
-  if (mod && key === 's') { e.preventDefault(); if (editingId) commitEditor(); saveFile(e.shiftKey); return; }
+  if (mod && key === 's') {
+    e.preventDefault(); if (editingId) commitEditor();
+    if (e.shiftKey) saveFile(); else { flushSync(); toast(wsReady ? 'Changes are saved automatically' : 'Offline: changes will be sent when the connection is back'); }
+    return;
+  }
   if (mod && key === 'o') { e.preventDefault(); openFile(); return; }
   if (isTyping(e) || document.querySelector('dialog[open]')) return;
   if (e.key === ' ') { spaceDown = true; stage.classList.add('panning'); e.preventDefault(); return; }
@@ -3233,6 +3290,390 @@ window.addEventListener('keyup', e => {
 });
 window.addEventListener('blur', () => { spaceDown = false; stage.classList.remove('panning'); svg.classList.remove('shift'); });
 window.addEventListener('resize', render);
+
+/* =====================================================================
+   Collaboration: the shared diagram, real-time sync and presence.
+   The server keeps the diagram and applies element-level operations in
+   the order they arrive (last writer wins). Every client diffs its doc
+   against `base` (what the server has plus what this client already sent)
+   and sends the difference as operations; the server acks them and relays
+   them to the others. A remote change to something this client changed
+   and has not had acked yet is skipped: ours reaches the server later and
+   wins there too, so all clients end up with the same diagram.
+   ===================================================================== */
+const DIAGRAM_ID = (location.pathname.match(/^\/d\/([A-Za-z0-9_-]{8,64})\/?$/) || [])[1] || null;
+const PEER_COLORS = ['#e11d48', '#2563eb', '#059669', '#d97706', '#7c3aed', '#0891b2', '#db2777', '#65a30d', '#ea580c', '#4f46e5'];
+const elemIds = () => new Set([...doc.blocks.map(b => b.id), ...doc.links.map(l => l.id)]);
+const NORM = { blocks: normBlock, links: normLink, frames: normFrame, flows: o => normFlow(o, elemIds()) };
+let ws = null, wsReady = false, everConnected = false, retryMs = 500, myCid = null;
+let base = null;          // { blocks: Map(id -> json), …, order: { blocks: [ids], … }, settings: json, name }
+let inflight = [];        // sent batches waiting for an ack: { n, keys, ops }
+const pending = new Map(); // key -> number of unacked ops touching it
+let opSeq = 0, syncTimer = null;
+const peers = new Map();  // cid -> { user, cursor, sel }
+let me = loadMe();
+
+function loadMe() {
+  let u = null;
+  try { u = JSON.parse(storageGet('archdiagram.user') || 'null'); } catch (e) { u = null; }
+  if (!u || typeof u.name !== 'string' || !/^#[0-9a-f]{6}$/i.test(u.color || '')) {
+    u = { name: 'Guest ' + Math.floor(100 + Math.random() * 900), color: PEER_COLORS[Math.floor(Math.random() * PEER_COLORS.length)] };
+    storageSet('archdiagram.user', JSON.stringify(u));
+  }
+  return u;
+}
+
+function takeBase(src) {
+  const b = { order: {}, settings: JSON.stringify(settings), name: docName };
+  for (const c of COLLS) {
+    const list = Array.isArray(src[c]) ? src[c] : [];
+    b[c] = new Map(list.map(o => [o.id, JSON.stringify(o)]));
+    b.order[c] = list.map(o => o.id);
+  }
+  return b;
+}
+
+/* operations that turn `base` into the current doc; `base` is moved along */
+function diffOps() {
+  const ops = [];
+  for (const c of COLLS) {
+    const bm = base[c], cur = doc[c], ids = new Set();
+    for (const o of cur) {
+      ids.add(o.id);
+      const s = JSON.stringify(o), prev = bm.get(o.id);
+      if (prev === s) continue;
+      bm.set(o.id, s);
+      if (prev === undefined) { ops.push({ o: 'add', c, v: JSON.parse(s) }); continue; }
+      const p = JSON.parse(prev), now = JSON.parse(s), f = {};
+      let any = false;
+      for (const k of new Set([...Object.keys(p), ...Object.keys(now)])) {
+        if (k === 'id' || JSON.stringify(p[k]) === JSON.stringify(now[k])) continue;
+        f[k] = k in now ? now[k] : null;
+        any = true;
+      }
+      if (any) ops.push({ o: 'set', c, id: o.id, f });
+    }
+    for (const id of [...bm.keys()]) if (!ids.has(id)) { bm.delete(id); ops.push({ o: 'del', c, id }); }
+    // the server appends new elements; send the order only when that is not what we have
+    const expect = base.order[c].filter(id => ids.has(id)), known = new Set(expect);
+    for (const o of cur) if (!known.has(o.id)) expect.push(o.id);
+    const order = cur.map(o => o.id);
+    if (expect.join('\n') !== order.join('\n')) ops.push({ o: 'order', c, ids: order });
+    base.order[c] = order;
+  }
+  const st = JSON.stringify(settings);
+  if (st !== base.settings) { base.settings = st; ops.push({ o: 'settings', v: JSON.parse(st) }); }
+  if (docName !== base.name) { base.name = docName; ops.push({ o: 'name', v: docName }); }
+  return ops;
+}
+function opKeys(op) {
+  switch (op.o) {
+    case 'add': return [op.c + ':' + op.v.id];
+    case 'del': return [op.c + ':' + op.id];
+    case 'set': return Object.keys(op.f).map(k => op.c + ':' + op.id + '.' + k);
+    case 'order': return ['order:' + op.c];
+    default: return [op.o];
+  }
+}
+
+function scheduleSync() {
+  if (!syncTimer) syncTimer = setTimeout(flushSync, 40);
+}
+function flushSync() {
+  clearTimeout(syncTimer); syncTimer = null;
+  if (!wsReady || !base) return;
+  const ops = diffOps();
+  if (!ops.length) return;
+  const keys = ops.flatMap(opKeys);
+  for (const k of keys) pending.set(k, (pending.get(k) || 0) + 1);
+  const n = ++opSeq;
+  inflight.push({ n, keys, ops });
+  ws.send(JSON.stringify({ t: 'ops', n, ops }));
+}
+function onAck() {
+  const b = inflight.shift();
+  if (!b) return;
+  for (const k of b.keys) { const v = pending.get(k) - 1; if (v > 0) pending.set(k, v); else pending.delete(k); }
+}
+
+/* Apply operations to the local doc. Remote ones respect pending local
+   changes and move `base` along; replayed ones (our own, after a reconnect)
+   are applied as they are and sent again by the next sync. */
+function applyOps(ops, remote) {
+  if (remote) flushSync(); // our unsent edits go first, so the pending rule covers them
+  const isPending = k => remote && pending.has(k);
+  let changed = false, inspTouched = false, nameChanged = false;
+  for (const op of ops) {
+    if (!op || typeof op !== 'object') continue;
+    if (op.o === 'settings') {
+      if (isPending('settings') || !op.v || typeof op.v !== 'object') continue;
+      settings = deepMerge(DEFAULT_SETTINGS, op.v);
+      if (remote) base.settings = JSON.stringify(settings);
+      changed = true; continue;
+    }
+    if (op.o === 'name') {
+      if (isPending('name')) continue;
+      docName = String(op.v ?? '').slice(0, 200) || 'Untitled diagram';
+      if (remote) base.name = docName;
+      nameChanged = true; continue;
+    }
+    const c = op.c;
+    if (!COLLS.includes(c)) continue;
+    if (op.o === 'order') {
+      if (isPending('order:' + c) || !Array.isArray(op.ids)) continue;
+      doc[c] = reorderList(doc[c], op.ids);
+      if (remote) base.order[c] = doc[c].map(o => o.id);
+      changed = true; continue;
+    }
+    const id = op.o === 'add' ? op.v && op.v.id : op.id;
+    if (typeof id !== 'string' || isPending(c + ':' + id)) continue;
+    const list = doc[c], i = list.findIndex(o => o.id === id);
+    if (op.o === 'del') {
+      if (i >= 0) list.splice(i, 1);
+      if (remote) { base[c].delete(id); base.order[c] = base.order[c].filter(x => x !== id); }
+      if (sel.delete(id)) inspTouched = true;
+      if (editingId === id) cancelEdit();
+      if (c === 'flows' && activeFlow === id) { activeFlow = null; recording = false; }
+      changed = true; continue;
+    }
+    const fields = op.o === 'add' ? op.v : op.f;
+    if (!fields || typeof fields !== 'object' || (op.o === 'set' && i < 0)) continue;
+    const el = i >= 0 ? list[i] : null;
+    const merged = op.o === 'set' ? clone(el) : {};
+    for (const [k, v] of Object.entries(fields)) {
+      if (k === '__proto__') continue;
+      if (el && isPending(c + ':' + id + '.' + k)) { if (k in el) merged[k] = clone(el[k]); else delete merged[k]; continue; }
+      if (v === null) delete merged[k]; else merged[k] = v;
+    }
+    merged.id = id;
+    const norm = NORM[c](merged);
+    if (el) { for (const k of Object.keys(el)) delete el[k]; Object.assign(el, norm); } // in place: a drag may hold it
+    else list.push(norm);
+    if (remote) {
+      base[c].set(id, JSON.stringify(el || norm));
+      if (!el) base.order[c].push(id);
+    }
+    if (sel.has(id) || c === 'flows') inspTouched = true;
+    changed = true;
+  }
+  if (changed) {
+    bmap = new Map(doc.blocks.map(b => [b.id, b]));
+    dropDangling();
+    bmap = new Map(doc.blocks.map(b => [b.id, b]));
+    if (activeFlow && !flowById(activeFlow)) { activeFlow = null; recording = false; inspTouched = true; }
+    render();
+    if (inspTouched) refreshInspectorSoon();
+  }
+  if (nameChanged) { updateTitle(); rememberRecent(); }
+}
+
+/* don't rebuild the side panel under the user's fingers */
+let inspStale = false;
+function refreshInspectorSoon() {
+  const a = document.activeElement;
+  if (a && $('#side').contains(a) && a.matches('input,textarea,select,[contenteditable]')) { inspStale = true; return; }
+  inspStale = false;
+  refreshInspector();
+}
+$('#side').addEventListener('focusout', () => setTimeout(() => { if (inspStale) refreshInspectorSoon(); }, 0));
+
+/* ---------- connection ---------- */
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}/ws/${DIAGRAM_ID}`);
+  ws.onopen = () => { retryMs = 500; ws.send(JSON.stringify({ t: 'hello', user: me })); };
+  ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (err) { return; } onMessage(m); };
+  ws.onclose = async () => {
+    const was = wsReady;
+    wsReady = false;
+    peers.clear(); renderPeers(); render();
+    setConn(false);
+    if (!everConnected) {
+      // the diagram may simply not exist
+      const res = await fetch('/api/diagrams/' + DIAGRAM_ID, { method: 'GET' }).catch(() => null);
+      if (res && res.status === 404) { showLoading('<b>This diagram does not exist.</b><span>The link may be mistyped, or the diagram was removed.</span><a href="/">Create a new diagram</a>'); return; }
+    }
+    if (was) toast('Connection lost: reconnecting… Your changes are kept.', true);
+    setTimeout(connect, retryMs);
+    retryMs = Math.min(retryMs * 2, 10000);
+  };
+}
+function setConn(on) {
+  const s = $('#connState');
+  s.className = on ? 'on' : 'off';
+  s.title = on ? 'Connected: changes are saved and shared' : 'Offline: reconnecting. Your changes will be sent when the connection is back.';
+}
+function showLoading(html) {
+  const l = $('#loading');
+  if (html === null) { l.hidden = true; return; }
+  l.innerHTML = html; l.hidden = false;
+}
+
+function onMessage(m) {
+  switch (m.t) {
+    case 'init': onInit(m); break;
+    case 'ack': onAck(); break;
+    case 'ops': if (base && Array.isArray(m.ops)) applyOps(m.ops, true); break;
+    case 'join': peers.set(m.cid, { user: m.user, cursor: null, sel: [] }); renderPeers(); break;
+    case 'leave': peers.delete(m.cid); renderPeers(); render(); break;
+    case 'user': { const p = peers.get(m.cid); if (p) { p.user = m.user; renderPeers(); render(); } break; }
+    case 'presence': {
+      const p = peers.get(m.cid);
+      if (!p) break;
+      const selChanged = JSON.stringify(p.sel) !== JSON.stringify(m.sel || []);
+      p.cursor = m.cursor; p.sel = m.sel || [];
+      if (selChanged) render(); else renderCursors();
+      break;
+    }
+  }
+}
+
+function onInit(m) {
+  const first = !base;
+  // after a reconnect: what we sent without an ack, and what we changed offline, goes again
+  const replay = first ? [] : inflight.flatMap(b => b.ops).concat(diffOps());
+  inflight = []; pending.clear();
+  myCid = m.you;
+  const d = m.doc || {};
+  if (editingId && first) cancelEdit();
+  settings = d.settings ? deepMerge(DEFAULT_SETTINGS, d.settings) : (first ? loadUserDefaults() : settings);
+  docName = String(d.name || 'Untitled diagram');
+  doc = normalizeDoc(d);
+  // the raw server state is the base, so whatever normalising changed is sent back once
+  base = takeBase(d);
+  base.settings = JSON.stringify(d.settings || null);
+  if (replay.length) applyOps(replay, false);
+  bmap = new Map(doc.blocks.map(b => [b.id, b]));
+  for (const id of [...sel]) if (!bmap.has(id) && !linkById(id) && !frameById(id)) sel.delete(id);
+  if (activeFlow && !flowById(activeFlow)) { activeFlow = null; recording = false; }
+  peers.clear();
+  for (const p of m.peers || []) peers.set(p.cid, { user: p.user, cursor: p.cursor || null, sel: p.sel || [] });
+  wsReady = true; everConnected = true;
+  setConn(true); showLoading(null);
+  if (first) {
+    if (location.hash === '#demo' && !doc.blocks.length && !doc.links.length) {
+      doc = demoDiagram();
+      bmap = new Map(doc.blocks.map(b => [b.id, b]));
+    }
+    if (location.hash) history.replaceState(null, '', location.pathname);
+    undoStack = []; redoStack = [];
+    requestAnimationFrame(fitView);
+  } else if (replay.length) toast('Reconnected: your offline changes were sent');
+  lastPresence = '';
+  updateTitle(); renderPeers(); rememberRecent();
+  refreshInspector(); render();
+  flushSync();
+}
+
+/* ---------- presence: pointers, selections, who is here ---------- */
+let presenceTimer = null, lastPresence = '', myCursor = null;
+function sendPresence() {
+  if (presenceTimer || !wsReady) return;
+  presenceTimer = setTimeout(() => {
+    presenceTimer = null;
+    if (!wsReady) return;
+    const s = JSON.stringify({ t: 'presence', cursor: myCursor, sel: [...sel] });
+    if (s !== lastPresence) { lastPresence = s; ws.send(s); }
+  }, 50);
+}
+svg.addEventListener('pointermove', e => { const p = toWorld(e); myCursor = { x: r2(p.x), y: r2(p.y) }; sendPresence(); });
+svg.addEventListener('pointerleave', () => { myCursor = null; sendPresence(); });
+
+function peersSvg() {
+  let s = '';
+  const sw = 2 / view.k, pad = 5 / view.k;
+  for (const p of peers.values()) {
+    if (!p.sel || !p.sel.length) continue;
+    const col = esc(p.user.color);
+    let labelled = false;
+    for (const id of p.sel) {
+      const o = bmap.get(id) || frameById(id);
+      if (o) {
+        s += `<rect x="${f1(o.x - pad)}" y="${f1(o.y - pad)}" width="${f1(o.w + 2 * pad)}" height="${f1(o.h + 2 * pad)}" rx="${f1((o.radius || 0) + pad)}"
+          fill="none" stroke="${col}" stroke-width="${sw}" stroke-dasharray="${6 / view.k} ${4 / view.k}" pointer-events="none"/>`;
+        if (!labelled) {
+          labelled = true;
+          const fs = 11 / view.k;
+          s += `<text x="${f1(o.x - pad)}" y="${f1(o.y - pad - 4 / view.k)}" font-size="${fs}" font-weight="600" fill="${col}" pointer-events="none"
+            font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">${esc(p.user.name)}</text>`;
+        }
+        continue;
+      }
+      const g = lastGeo.get(id);
+      if (g) s += `<path d="${geoPath(g)}" fill="none" stroke="${col}" stroke-opacity=".35" stroke-width="${8 / view.k}" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>`;
+    }
+  }
+  return s;
+}
+function renderCursors() {
+  let h = '';
+  for (const p of peers.values()) {
+    if (!p.cursor) continue;
+    const x = view.x + p.cursor.x * view.k, y = view.y + p.cursor.y * view.k, col = esc(p.user.color);
+    h += `<div class="rcursor" style="transform:translate(${f1(x)}px,${f1(y)}px)"><svg width="16" height="20" viewBox="0 0 16 20">
+      <path d="M1 1l5.5 16 2.4-6.6L15.5 8z" fill="${col}" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>
+      <span style="background:${col}">${esc(p.user.name)}</span></div>`;
+  }
+  $('#cursors').innerHTML = h;
+}
+const initials = name => (String(name).trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2) || '?').toUpperCase();
+function renderPeers() {
+  const chip = (u, attrs, title) => `<span class="peer" ${attrs} style="background:${esc(u.color)}" title="${esc(title)}">${esc(initials(u.name))}</span>`;
+  const list = [...peers.entries()];
+  let h = chip(me, 'data-me="1"', me.name + ' (you): click to change your name and color').replace('class="peer"', 'class="peer me"');
+  for (const [cid, p] of list.slice(0, 6)) h += chip(p.user, `data-peer="${esc(cid)}"`, p.user.name + (p.cursor ? ': click to go to their pointer' : ''));
+  if (list.length > 6) h += `<span class="peer more" title="${esc(list.slice(6).map(([, p]) => p.user.name).join(', '))}">+${list.length - 6}</span>`;
+  $('#peers').innerHTML = h;
+}
+$('#peers').addEventListener('click', e => {
+  const c = e.target.closest('.peer');
+  if (!c) return;
+  if (c.dataset.me) {
+    const menu = $('#meMenu');
+    menu.hidden = !menu.hidden;
+    if (!menu.hidden) { $('#meName').value = me.name; $('#meColor').value = me.color; $('#meName').focus(); $('#meName').select(); }
+    return;
+  }
+  const p = peers.get(c.dataset.peer);
+  if (p && p.cursor) {
+    const r = svg.getBoundingClientRect();
+    view.x = r.width / 2 - p.cursor.x * view.k; view.y = r.height / 2 - p.cursor.y * view.k;
+    render();
+  }
+});
+function onMeInput() {
+  me = { name: $('#meName').value.trim().slice(0, 40) || me.name, color: $('#meColor').value };
+  storageSet('archdiagram.user', JSON.stringify(me));
+  renderPeers();
+  if (wsReady) ws.send(JSON.stringify({ t: 'user', user: me }));
+}
+$('#meName').addEventListener('change', onMeInput);
+$('#meColor').addEventListener('change', onMeInput);
+$('#meName').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === 'Escape') { onMeInput(); $('#meMenu').hidden = true; } });
+document.addEventListener('pointerdown', e => { if (!e.target.closest('#collab .menu-wrap')) $('#meMenu').hidden = true; });
+
+/* ---------- name, link, recent list ---------- */
+const docNameInput = $('#docName');
+docNameInput.addEventListener('change', () => {
+  const v = docNameInput.value.trim().slice(0, 200);
+  if (v && v !== docName) { docName = v; markDirty(); rememberRecent(); }
+  updateTitle();
+});
+docNameInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') docNameInput.blur();
+  if (e.key === 'Escape') { docNameInput.value = docName; docNameInput.blur(); }
+});
+async function shareLink() {
+  const url = location.origin + '/d/' + DIAGRAM_ID;
+  try { await navigator.clipboard.writeText(url); toast('Link copied. Anyone with the link can edit this diagram.'); }
+  catch (err) { toast(url); }
+}
+function rememberRecent() {
+  let list = [];
+  try { list = JSON.parse(storageGet('archdiagram.recent') || '[]').filter(r => r && r.id && r.id !== DIAGRAM_ID); } catch (e) { list = []; }
+  list.unshift({ id: DIAGRAM_ID, name: docName, at: Date.now() });
+  storageSet('archdiagram.recent', JSON.stringify(list.slice(0, 30)));
+}
 
 /* =====================================================================
    Demo diagram & startup
@@ -3281,18 +3722,10 @@ function demoDiagram() {
 function init() {
   $('#verLabel').textContent = 'v' + APP_INFO.version;
   $('#ghLink').href = APP_INFO.github;
-  let restored = false;
-  try {
-    const saved = JSON.parse(storageGet('archdiagram.autosave') || 'null');
-    if (saved && saved.data) { loadFileObject(saved.data, saved.fileName, null); undoStack = []; restored = true; }
-  } catch (e) { restored = false; }
-  if (!restored) {
-    doc = demoDiagram();
-    bmap = new Map(doc.blocks.map(b => [b.id, b]));
-    requestAnimationFrame(fitView);
-  }
-  dirty = false; updateTitle();
+  if (!DIAGRAM_ID) { location.replace('/'); return; }
+  updateTitle(); renderPeers();
   refreshInspector(); render();
+  connect();
 }
 init();
 </script>
